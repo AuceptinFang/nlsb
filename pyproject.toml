@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nailong-detector"
+version = "0.2.0"
+description = "在本机屏蔽 QQ 表情并自动识别奶龙（DINOv2-small 特征 + 逻辑回归；也带一个无模型的规则识别器）"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.22", "Pillow>=9.1", "onnxruntime>=1.16"]
+
+[project.optional-dependencies]
+gpu = ["wgpu>=0.20"]   # Vulkan / Metal / D3D12，逐位与 CPU 一致
+
+[project.scripts]
+nlsb = "nlsb.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nailong = ["head.npz"]

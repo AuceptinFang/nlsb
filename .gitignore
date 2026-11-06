@@ -1,0 +1,12 @@
+__pycache__/
+*.egg-info/
+.venv/
+*.so
+*.o
+# 标注、特征缓存、调参结果：来自私人聊天记录，不要提交
+*.csv
+*.jsonl
+features.cache.json
+params*.json
+data/
+*.emb.npz
