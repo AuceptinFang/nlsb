@@ -1,6 +1,6 @@
-# nlsb
+# nlsb QQ
 
-nlsb (nai long sticker blocker) 用于**自动识别并屏蔽新收到的奶龙**（包括各种乱七八糟的衍生形象）仅保证macOS 使用，linux 未充分测试，windows 用户请自行适配
+nlsb (nai long sticker blocker) 用于**自动识别并屏蔽QQ中收到的奶龙**（包括各种乱七八糟的衍生形象）仅保证macOS 使用，linux 未充分测试，windows 用户请自行适配
 
 几点说明：
 
