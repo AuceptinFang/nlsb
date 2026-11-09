@@ -34,6 +34,27 @@ def test_transparent_background():
     assert len(panels(Image.fromarray(a))) == 16
 
 
+def test_touching_frames_with_captions():
+    """2×6 对比图：上下两格的图框几乎贴着，说明文字压在上面那格的下边框上，左边还有竖排的行标题。"""
+    rng = np.random.default_rng(1)
+    im = Image.new("RGB", (2400, 920), "white")
+    d = ImageDraw.Draw(im)
+    for row, top in enumerate((140, 500)):
+        for j in range(6):
+            x = 40 + j * 395
+            tile = Image.fromarray(rng.integers(0, 256, (12, 12, 3), np.uint8)).resize((350, 350), Image.BICUBIC)
+            im.paste(tile, (x, top))
+            d.rectangle((x, top, x + 350, top + 350), outline="black", width=2)
+            d.text((x + 150, top - 18 if row == 0 else top - 4), "p=0.98", fill="black")
+    bs = panels(im)
+    assert len(bs) == 12, bs
+    assert all(330 < b[2] - b[0] < 380 and 330 < b[3] - b[1] < 380 for b in bs), bs
+
+
+def test_tall_screenshot_skipped():
+    assert panels(grid(rows=8, cols=3)) == []  # 高宽比 ≥ 2：当作手机截图
+
+
 def test_not_collage():
     single = Image.new("RGB", (512, 512), "white")
     ImageDraw.Draw(single).ellipse((60, 40, 450, 480), fill=(240, 200, 80))
