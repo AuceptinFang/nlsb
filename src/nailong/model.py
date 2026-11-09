@@ -2,6 +2,7 @@
 
 骨干网络 DINOv2-small（Meta，Apache-2.0；Xenova 导出的 int8 ONNX）首次使用时下载并校验 SHA-256；
 分类头 head.npz 只有 768 个权重 + 截距，随包分发。动图取 4 个均匀分布的帧，取最高分。
+整图没命中时，再沿空隙把拼图切开逐块打分（collage.py），两块以上高分才算命中。
 
   python -m nailong.model 图片…     打分
   python -m nailong.model --fetch   只下载模型
@@ -23,6 +24,7 @@ HEAD = Path(__file__).with_name("head.npz")
 SIZE = 224
 SHRINK = 512  # 预处理前把长边缩到 SHRINK～2×SHRINK
 FRAMES = 4
+PANEL_THR = 0.8  # 拼图：至少两块子图分数都到这个值才算命中（0.65～0.95 之间误判数一样，取中间留余量）
 
 
 def model_dir():
@@ -99,11 +101,16 @@ class Classifier:
         x = self.np.asarray(sq.resize((SIZE, SIZE), Image.BICUBIC), self.np.float32) / 255.0
         return ((x - self.mean) / self.std).transpose(2, 0, 1)
 
-    def frames(self, path):
+    def _open(self, path):
         from PIL import Image, ImageFile
         ImageFile.LOAD_TRUNCATED_IMAGES = self.tolerant
         im = Image.open(path)
         im.draft("RGB", (SHRINK, SHRINK))  # JPEG 解码时直接按 1/2、1/4、1/8 缩小，其他格式无效果
+        return im
+
+    def frames(self, path, im=None):
+        if im is None:
+            im = self._open(path)
         n = getattr(im, "n_frames", 1)
         out = [self._prep(im)]
         for k in sorted({round(i * (n - 1) / (FRAMES - 1)) for i in range(1, FRAMES)} - {0}) if n > 1 else []:
@@ -116,13 +123,34 @@ class Classifier:
                 break  # 训练时：动图后面的帧坏了就只用前面的
         return out
 
-    def score(self, path):
-        """返回 (是否奶龙, 分数 0~1)。"""
+    def _scores(self, xs):
         np = self.np
-        h = np.concatenate([self.sess.run(None, {self.inp: x[None]})[0] for x in self.frames(path)])
+        h = np.concatenate([self.sess.run(None, {self.inp: x[None]})[0] for x in xs])
         e = np.concatenate([h[:, 0], h[:, 1:].mean(1)], 1)  # CLS + patch 平均，768 维
         e /= np.linalg.norm(e, axis=1, keepdims=True)
-        s = float((1 / (1 + np.exp(-(e @ self.a + self.b)))).max())
+        return 1 / (1 + np.exp(-(e @ self.a + self.b)))
+
+    def _collage(self, im):
+        """拼图里有两块子图分数都到 PANEL_THR 时，返回第二块的分数，否则返回 0。
+        要两块同时命中：截图里夹着一张奶龙表情的情况很常见，只命中一块的多半是这种，不算。"""
+        from .collage import panels
+        im.seek(0)
+        im = im.convert("RGBA")
+        hits = 0
+        for box in panels(im):  # 从大到小；够两块就不用再算了
+            s = float(self._scores([self._prep(im.crop(box))])[0])
+            if s >= PANEL_THR:
+                hits += 1
+                if hits == 2:
+                    return s
+        return 0.0
+
+    def score(self, path):
+        """返回 (是否奶龙, 分数 0~1)。整图没命中时，再把拼图切开逐块打分。"""
+        im = self._open(path)
+        s = float(self._scores(self.frames(path, im)).max())
+        if s < self.thr:
+            s = max(s, self._collage(im))
         return s >= self.thr, s
 
 

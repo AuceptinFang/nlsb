@@ -106,6 +106,7 @@ nlsb uninstall [--restore]    # 卸载后台服务；--restore：同时还原所
 
 ```bash
 python tests/test_features.py      # 规则识别器的特征行为（只用合成图）
+python tests/test_collage.py       # 拼图切分（只用合成图）
 python tests/test_gpu.py           # GPU 与 CPU 逐位一致（没有 GPU 时自动跳过）
 python tools/review.py             # 在浏览器里检查自动屏蔽的结果，标出误伤和漏网的；--apply 应用标注
 python tools/train_head.py labels.csv   # 用自己的标注重新训练分类器（见 docs/model.md）
